@@ -3,6 +3,9 @@
 import requests
 import os
 
+# =========================
+# TELEGRAM CONFIG
+# =========================
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
@@ -14,7 +17,8 @@ API_URL = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 # =========================
 def confidence_bar(score, length=10):
     filled = int((score / 100) * length)
-    return "▓" * filled + "░" * (length - filled)
+    empty = length - filled
+    return "▓" * filled + "░" * empty
 
 
 def market_bias(side):
@@ -34,7 +38,7 @@ def send(msg):
 
 
 # =========================
-# SIGNAL MESSAGE
+# MAIN SIGNAL MESSAGE
 # =========================
 def send_signal(symbol, tf, side, entry, sl, tp1, tp2, tp3, confidence):
     emoji = "🟢🚀" if side == "BUY" else "🔴📉"
@@ -55,14 +59,15 @@ def send_signal(symbol, tf, side, entry, sl, tp1, tp2, tp3, confidence):
         f"{fire} *CONFIDENCE*\n"
         f"`{confidence}/100`\n"
         f"`{confidence_bar(confidence)}`\n\n"
-        f"📊 *Index Aligned (NIFTY)*\n"
-        f"⚡ *Strategy* : Trend • Volume • Breakout • ATR\n\n"
+        f"⚡ *Strategy* : 15m → 1H | Trend • Volume • Breakout • ATR\n"
         f"━━━━━━━━━━━━━━━━━━"
     )
 
     send(msg)
-    # =========================
-# TEST SIGNAL (MANUAL)
+
+
+# =========================
+# TEST SIGNAL (ONE-TIME)
 # =========================
 def send_test_signal():
     send_signal(
