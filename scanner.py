@@ -2,46 +2,42 @@
 
 import time
 import yfinance as yf
-import pandas as pd
 
 from strategy import generate_signal, calculate_multi_tp
-from telegram import send_signal, send_test_signal
+from telegram import send_signal
 from config import LOWER_TF, HIGHER_TF, SCAN_INTERVAL
 from symbols import STOCKS
 
+# Prevent duplicate signals (per symbol + side)
 LAST_SIGNAL = {}
 
 # =========================
-# FETCH CANDLES (ROBUST)
+# FETCH CANDLES (YFINANCE)
 # =========================
-def fetch_candles(symbol, tf, retries=3):
+def fetch_candles(symbol, tf):
     interval_map = {
         "15m": "15m",
         "1H": "60m"
     }
 
-    for attempt in range(retries):
-        try:
-            df = yf.download(
-                symbol,
-                interval=interval_map[tf],
-                period="30d",
-                progress=False,
-                threads=False
-            )
+    try:
+        df = yf.download(
+            symbol,
+            interval=interval_map[tf],
+            period="30d",
+            progress=False,
+            threads=False
+        )
 
-            if df is None or df.empty or len(df) < 60:
-                raise ValueError("Empty data")
+        if df is None or df.empty or len(df) < 60:
+            return None
 
-            df = df.rename(columns=str.lower)
-            return df
+        df = df.rename(columns=str.lower)
+        return df
 
-        except Exception as e:
-            print(f"⚠️ Retry {attempt+1} for {symbol} ({tf}) → {e}")
-            time.sleep(3)
-
-    print(f"❌ Failed data for {symbol} ({tf})")
-    return None
+    except Exception as e:
+        print(f"⚠️ Data fetch error for {symbol} ({tf}) → {e}")
+        return None
 
 
 # =========================
@@ -83,14 +79,12 @@ def scan_symbol(name, symbol):
 
 
 # =========================
-# MAIN LOOP
+# MAIN SCANNER LOOP
 # =========================
 def scanner_loop():
-    # 🔔 ONE-TIME TEST
-    send_test_signal()
+    print("📡 YFINANCE NSE Scanner running...")
 
     while True:
-        print("📡 YFINANCE NSE Scanner running...")
         for name, symbol in STOCKS.items():
             print(f"🔍 Scanning {name}")
             scan_symbol(name, symbol)
