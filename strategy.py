@@ -10,22 +10,30 @@ from indicators import (
 from config import *
 
 # =========================
-# TREND DETECTION
+# TREND DETECTION (FIXED)
 # =========================
 def detect_trend(df):
     if len(df) < MA_PERIOD:
         return None
 
-    close = df["close"].iloc[-1]
-    ma = moving_average(df["close"], MA_PERIOD).iloc[-1]
+    close_price = float(df["close"].iloc[-1])
 
-    return "BUY" if close > ma else "SELL"
+    ma_series = moving_average(df["close"], MA_PERIOD)
+    ma_value = float(ma_series.iloc[-1])
+
+    if close_price > ma_value:
+        return "BUY"
+    else:
+        return "SELL"
 
 
 # =========================
 # MULTI TP / SL
 # =========================
 def calculate_multi_tp(entry, atr_val, side):
+    entry = float(entry)
+    atr_val = float(atr_val)
+
     if side == "BUY":
         tp1 = entry + atr_val * TP1_ATR
         tp2 = entry + atr_val * TP2_ATR
@@ -86,7 +94,10 @@ def generate_signal(df_ltf, df_htf):
     trend_ltf = detect_trend(df_ltf)
     trend_htf = detect_trend(df_htf)
 
-    # ❌ Reject if HTF disagrees
+    if trend_ltf is None or trend_htf is None:
+        return None
+
+    # HTF must align with LTF
     if trend_ltf != trend_htf:
         return None
 
@@ -111,8 +122,8 @@ def generate_signal(df_ltf, df_htf):
     if atr_series.isna().all():
         return None
 
-    atr_val = atr_series.iloc[-1]
-    atr_ok = atr_val > atr_series.mean()
+    atr_val = float(atr_series.iloc[-1])
+    atr_ok = atr_val > float(atr_series.mean())
 
     score = confidence_score(
         trend_ltf,
