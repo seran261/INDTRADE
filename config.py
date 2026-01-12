@@ -28,7 +28,7 @@ MA_PERIOD = 50        # Moving average for trend
 # VOLUME FILTER
 # =========================
 VOLUME_LOOKBACK = 20
-VOLUME_MULTIPLIER = 1.3   # relaxed for Indian equities
+VOLUME_MULTIPLIER = 1.05   # relaxed for Indian equities
 
 # =========================
 # BREAKOUT FILTER
@@ -55,7 +55,7 @@ WEIGHT_VOLUME    = 15
 WEIGHT_BREAKOUT  = 20
 WEIGHT_ATR       = 10
 
-MIN_CONFIDENCE_SCORE = 40   # tuned to allow signals
+MIN_CONFIDENCE_SCORE = 20   # tuned to allow signals
 
 # =========================
 # SIGNAL CONTROL
