@@ -3,27 +3,22 @@
 import time
 import requests
 import pandas as pd
-from strategy import generate_signal, calculate_multi_tp
-from telegram import send_signal
-from config import LOWER_TF, HIGHER_TF, SCAN_INTERVAL
 import os
 
-API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
-
-BASE_URL = "https://www.alphavantage.co/query"
+from strategy import generate_signal, calculate_multi_tp
+from telegram import send_signal, send_test_signal
+from config import LOWER_TF, HIGHER_TF, SCAN_INTERVAL
+from symbols import STOCKS
+from provider_config import (
+    ALPHA_VANTAGE_API_KEY,
+    ALPHA_BASE_URL,
+    REQUEST_DELAY,
+    INTRADAY_OUTPUTSIZE
+)
 
 # =========================
-# SYMBOLS (BSE FORMAT)
+# INTERNAL STATE
 # =========================
-STOCKS = {
-    "RELIANCE": "RELIANCE.BSE",
-    "TCS": "TCS.BSE",
-    "INFY": "INFY.BSE",
-    "HDFCBANK": "HDFCBANK.BSE",
-    "ICICIBANK": "ICICIBANK.BSE",
-    "SBIN": "SBIN.BSE"
-}
-
 LAST_SIGNAL = {}
 
 TF_MAP = {
@@ -33,7 +28,7 @@ TF_MAP = {
 }
 
 # =========================
-# FETCH DATA
+# FETCH CANDLES
 # =========================
 def fetch_candles(symbol, tf):
     function = (
@@ -45,14 +40,14 @@ def fetch_candles(symbol, tf):
     params = {
         "function": function,
         "symbol": symbol,
-        "apikey": API_KEY,
-        "outputsize": "compact"
+        "apikey": ALPHA_VANTAGE_API_KEY,
+        "outputsize": INTRADAY_OUTPUTSIZE
     }
 
     if tf != "1D":
         params["interval"] = TF_MAP[tf]
 
-    r = requests.get(BASE_URL, params=params, timeout=15)
+    r = requests.get(ALPHA_BASE_URL, params=params, timeout=15)
     data = r.json()
 
     key = (
@@ -62,6 +57,7 @@ def fetch_candles(symbol, tf):
     )
 
     if key not in data:
+        print(f"⚠️ No data for {symbol} ({tf})")
         return None
 
     df = pd.DataFrame.from_dict(data[key], orient="index")
@@ -82,15 +78,16 @@ def fetch_candles(symbol, tf):
 
     return df
 
+
 # =========================
-# SCAN SYMBOL
+# SCAN SINGLE SYMBOL
 # =========================
 def scan_symbol(name, symbol):
     df_ltf = fetch_candles(symbol, LOWER_TF)
-    time.sleep(12)  # rate limit safety
+    time.sleep(REQUEST_DELAY)
 
     df_htf = fetch_candles(symbol, HIGHER_TF)
-    time.sleep(12)
+    time.sleep(REQUEST_DELAY)
 
     if df_ltf is None or df_htf is None:
         return
@@ -120,21 +117,18 @@ def scan_symbol(name, symbol):
         confidence=signal["confidence"]
     )
 
-# =========================
-# MAIN LOOP
-# =========================
-from telegram import send_test_signal
 
+# =========================
+# MAIN SCANNER LOOP
+# =========================
 def scanner_loop():
-    send_test_signal()  # 🔔 TEST ALERT (remove after confirmation)
-    while True:
-        print("📡 Alpha Vantage NSE Scanner running...")
-        ...
+    # 🔔 ONE-TIME TELEGRAM TEST
+    send_test_signal()
 
-def scanner_loop():
     while True:
         print("📡 Alpha Vantage NSE Scanner running...")
         for name, symbol in STOCKS.items():
+            print(f"🔍 Scanning {name}")
             scan_symbol(name, symbol)
 
         time.sleep(SCAN_INTERVAL)
