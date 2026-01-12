@@ -33,7 +33,7 @@ MA_PERIOD = 50
 VOLUME_LOOKBACK = 20
 
 # Current volume must be X times avg volume
-VOLUME_MULTIPLIER = 1.8
+VOLUME_MULTIPLIER = 1.3
 
 # =========================
 # BREAKOUT FILTER
@@ -47,7 +47,7 @@ BREAKOUT_LOOKBACK = 20
 ATR_PERIOD = 14
 
 # Stop loss = ATR * multiplier
-ATR_SL_MULTIPLIER = 1.2
+ATR_SL_MULTIPLIER = 1.0
 
 # Take-profit ladder (ATR multiples)
 TP1_ATR = 0.8
@@ -64,7 +64,7 @@ WEIGHT_BREAKOUT  = 20
 WEIGHT_ATR       = 10
 
 # Minimum score required to send signal
-MIN_CONFIDENCE_SCORE = 55
+MIN_CONFIDENCE_SCORE = 40
 
 # =========================
 # SIGNAL CONTROL
