@@ -40,7 +40,7 @@ BREAKOUT_LOOKBACK = 20
 # =========================
 ATR_PERIOD = 14
 
-ATR_SL_MULTIPLIER = 1.0   # tighter SL for intraday
+ATR_SL_MULTIPLIER = 1.2   # tighter SL for intraday
 
 TP1_ATR = 0.8
 TP2_ATR = 1.6
