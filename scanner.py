@@ -1,94 +1,102 @@
 # scanner.py
 
 import time
+import requests
 import pandas as pd
-from kiteconnect import KiteConnect
 from strategy import generate_signal, calculate_multi_tp
 from telegram import send_signal
 from config import LOWER_TF, HIGHER_TF, SCAN_INTERVAL
 import os
 
-# =========================
-# ZERODHA AUTH
-# =========================
-kite = KiteConnect(api_key=os.getenv("KITE_API_KEY"))
-kite.set_access_token(os.getenv("KITE_ACCESS_TOKEN"))
+API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
+
+BASE_URL = "https://www.alphavantage.co/query"
 
 # =========================
-# SYMBOL CONFIG
+# SYMBOLS (BSE FORMAT)
 # =========================
-NIFTY_TOKEN = 256265  # NIFTY 50 instrument token
-
 STOCKS = {
-    "RELIANCE": 738561,
-    "TCS": 2953217,
-    "INFY": 408065,
-    "HDFCBANK": 341249,
-    "ICICIBANK": 1270529,
-    "SBIN": 779521
+    "RELIANCE": "RELIANCE.BSE",
+    "TCS": "TCS.BSE",
+    "INFY": "INFY.BSE",
+    "HDFCBANK": "HDFCBANK.BSE",
+    "ICICIBANK": "ICICIBANK.BSE",
+    "SBIN": "SBIN.BSE"
 }
 
 LAST_SIGNAL = {}
 
-# =========================
-# TIMEFRAME MAP
-# =========================
 TF_MAP = {
-    "15m": "15minute",
-    "1H": "60minute",
-    "1D": "day"
+    "15m": "15min",
+    "1H": "60min",
+    "1D": "DAILY"
 }
 
 # =========================
-# DATA FETCH
+# FETCH DATA
 # =========================
-def fetch_candles(token, tf, days=30):
-    data = kite.historical_data(
-        instrument_token=token,
-        from_date=pd.Timestamp.now() - pd.Timedelta(days=days),
-        to_date=pd.Timestamp.now(),
-        interval=TF_MAP[tf]
+def fetch_candles(symbol, tf):
+    function = (
+        "TIME_SERIES_INTRADAY"
+        if tf != "1D"
+        else "TIME_SERIES_DAILY"
     )
 
-    if not data or len(data) < 60:
+    params = {
+        "function": function,
+        "symbol": symbol,
+        "apikey": API_KEY,
+        "outputsize": "compact"
+    }
+
+    if tf != "1D":
+        params["interval"] = TF_MAP[tf]
+
+    r = requests.get(BASE_URL, params=params, timeout=15)
+    data = r.json()
+
+    key = (
+        f"Time Series ({TF_MAP[tf]})"
+        if tf != "1D"
+        else "Time Series (Daily)"
+    )
+
+    if key not in data:
         return None
 
-    df = pd.DataFrame(data)
-    df.set_index("date", inplace=True)
+    df = pd.DataFrame.from_dict(data[key], orient="index")
+    df = df.rename(columns={
+        "1. open": "open",
+        "2. high": "high",
+        "3. low": "low",
+        "4. close": "close",
+        "5. volume": "volume"
+    })
+
+    df = df.astype(float)
+    df.index = pd.to_datetime(df.index)
+    df = df.sort_index()
+
+    if len(df) < 60:
+        return None
+
     return df
 
-
 # =========================
-# NIFTY FILTER
+# SCAN SYMBOL
 # =========================
-def index_trend_ok(nifty_df, side):
-    close = nifty_df["close"].iloc[-1]
-    ema50 = nifty_df["close"].ewm(span=50).mean().iloc[-1]
+def scan_symbol(name, symbol):
+    df_ltf = fetch_candles(symbol, LOWER_TF)
+    time.sleep(12)  # rate limit safety
 
-    if side == "BUY" and close > ema50:
-        return True
-    if side == "SELL" and close < ema50:
-        return True
+    df_htf = fetch_candles(symbol, HIGHER_TF)
+    time.sleep(12)
 
-    return False
-
-
-# =========================
-# SCANNER LOOP
-# =========================
-def scan_symbol(name, token):
-    df_ltf = fetch_candles(token, LOWER_TF)
-    df_htf = fetch_candles(token, HIGHER_TF)
-    nifty_df = fetch_candles(NIFTY_TOKEN, HIGHER_TF)
-
-    if df_ltf is None or df_htf is None or nifty_df is None:
+    if df_ltf is None or df_htf is None:
         return
 
     signal = generate_signal(df_ltf, df_htf)
     if not signal:
-        return
-
-    if not index_trend_ok(nifty_df, signal["side"]):
         return
 
     key = (name, signal["side"])
@@ -112,11 +120,13 @@ def scan_symbol(name, token):
         confidence=signal["confidence"]
     )
 
-
+# =========================
+# MAIN LOOP
+# =========================
 def scanner_loop():
     while True:
-        print("📡 Zerodha NSE Scanner running...")
-        for name, token in STOCKS.items():
-            scan_symbol(name, token)
+        print("📡 Alpha Vantage NSE Scanner running...")
+        for name, symbol in STOCKS.items():
+            scan_symbol(name, symbol)
 
         time.sleep(SCAN_INTERVAL)
