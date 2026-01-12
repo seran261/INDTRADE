@@ -10,19 +10,22 @@ from indicators import (
 from config import *
 
 # =========================
-# TREND DETECTION (SAFE)
+# TREND DETECTION (100% SAFE)
 # =========================
 def detect_trend(df):
     if len(df) < MA_PERIOD:
         return None
 
+    # Force scalar close
     close_price = float(df["close"].iloc[-1].item())
+
     ma_series = moving_average(df["close"], MA_PERIOD)
 
-    if ma_series.isna().all():
+    # 🔒 SAFE CHECK — NEVER ambiguous
+    if ma_series.dropna().empty:
         return None
 
-    ma_value = float(ma_series.iloc[-1].item())
+    ma_value = float(ma_series.dropna().iloc[-1].item())
 
     return "BUY" if close_price > ma_value else "SELL"
 
@@ -97,7 +100,7 @@ def generate_signal(df_ltf, df_htf):
     if trend_ltf is None or trend_htf is None:
         return None
 
-    # Require alignment
+    # HTF alignment
     if trend_ltf != trend_htf:
         return None
 
@@ -119,11 +122,13 @@ def generate_signal(df_ltf, df_htf):
         return None
 
     atr_series = atr(df_ltf, ATR_PERIOD)
-    if atr_series.isna().all():
+
+    # 🔒 SAFE ATR CHECK
+    if atr_series.dropna().empty:
         return None
 
-    atr_val = float(atr_series.iloc[-1].item())
-    atr_mean = float(atr_series.mean().item())
+    atr_val = float(atr_series.dropna().iloc[-1].item())
+    atr_mean = float(atr_series.dropna().mean().item())
 
     atr_ok = atr_val > atr_mean
 
