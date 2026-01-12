@@ -10,32 +10,49 @@ from indicators import (
 from config import *
 
 # =========================
-# TREND DETECTION (100% SAFE)
+# TREND DETECTION (SAFE)
 # =========================
 def detect_trend(df):
     if len(df) < MA_PERIOD:
         return None
 
-    # Force scalar close
-    close_price = float(df["close"].iloc[-1].item())
+    # Always force scalar
+    close_price = df["close"].iloc[-1]
+    if hasattr(close_price, "item"):
+        close_price = float(close_price.item())
+    else:
+        close_price = float(close_price)
 
     ma_series = moving_average(df["close"], MA_PERIOD)
+    ma_series = ma_series.dropna()
 
-    # 🔒 SAFE CHECK — NEVER ambiguous
-    if ma_series.dropna().empty:
+    if ma_series.empty:
         return None
 
-    ma_value = float(ma_series.dropna().iloc[-1].item())
+    ma_value = ma_series.iloc[-1]
+    if hasattr(ma_value, "item"):
+        ma_value = float(ma_value.item())
+    else:
+        ma_value = float(ma_value)
 
     return "BUY" if close_price > ma_value else "SELL"
 
 
 # =========================
-# MULTI TP / SL
+# MULTI TP / SL (SAFE)
 # =========================
 def calculate_multi_tp(entry, atr_val, side):
-    entry = float(entry)
-    atr_val = float(atr_val)
+    # entry safety
+    if hasattr(entry, "item"):
+        entry = float(entry.item())
+    else:
+        entry = float(entry)
+
+    # atr safety
+    if hasattr(atr_val, "item"):
+        atr_val = float(atr_val.item())
+    else:
+        atr_val = float(atr_val)
 
     if side == "BUY":
         tp1 = entry + atr_val * TP1_ATR
@@ -100,18 +117,18 @@ def generate_signal(df_ltf, df_htf):
     if trend_ltf is None or trend_htf is None:
         return None
 
-    # HTF alignment
+    # HTF must align
     if trend_ltf != trend_htf:
         return None
 
-    # Volume
+    # Volume confirmation
     vol_ok = volume_spike(
         df_ltf["volume"],
         VOLUME_LOOKBACK,
         VOLUME_MULTIPLIER
     )
 
-    # Breakout
+    # Breakout confirmation
     breakout_ok = (
         breakout_high(df_ltf, BREAKOUT_LOOKBACK)
         if trend_ltf == "BUY"
@@ -122,13 +139,23 @@ def generate_signal(df_ltf, df_htf):
         return None
 
     atr_series = atr(df_ltf, ATR_PERIOD)
+    atr_series = atr_series.dropna()
 
-    # 🔒 SAFE ATR CHECK
-    if atr_series.dropna().empty:
+    if atr_series.empty:
         return None
 
-    atr_val = float(atr_series.dropna().iloc[-1].item())
-    atr_mean = float(atr_series.dropna().mean().item())
+    atr_val = atr_series.iloc[-1]
+    atr_mean = atr_series.mean()
+
+    if hasattr(atr_val, "item"):
+        atr_val = float(atr_val.item())
+    else:
+        atr_val = float(atr_val)
+
+    if hasattr(atr_mean, "item"):
+        atr_mean = float(atr_mean.item())
+    else:
+        atr_mean = float(atr_mean)
 
     atr_ok = atr_val > atr_mean
 
