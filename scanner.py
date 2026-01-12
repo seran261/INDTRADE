@@ -1,82 +1,47 @@
 # scanner.py
 
 import time
-import requests
+import yfinance as yf
 import pandas as pd
-import os
 
 from strategy import generate_signal, calculate_multi_tp
 from telegram import send_signal, send_test_signal
 from config import LOWER_TF, HIGHER_TF, SCAN_INTERVAL
 from symbols import STOCKS
-from provider_config import (
-    ALPHA_VANTAGE_API_KEY,
-    ALPHA_BASE_URL,
-    REQUEST_DELAY,
-    INTRADAY_OUTPUTSIZE
-)
 
-# =========================
-# INTERNAL STATE
-# =========================
 LAST_SIGNAL = {}
 
-TF_MAP = {
-    "15m": "15min",
-    "1H": "60min",
-    "1D": "DAILY"
-}
-
 # =========================
-# FETCH CANDLES
+# FETCH CANDLES (ROBUST)
 # =========================
-def fetch_candles(symbol, tf):
-    function = (
-        "TIME_SERIES_INTRADAY"
-        if tf != "1D"
-        else "TIME_SERIES_DAILY"
-    )
-
-    params = {
-        "function": function,
-        "symbol": symbol,
-        "apikey": ALPHA_VANTAGE_API_KEY,
-        "outputsize": INTRADAY_OUTPUTSIZE
+def fetch_candles(symbol, tf, retries=3):
+    interval_map = {
+        "15m": "15m",
+        "1H": "60m"
     }
 
-    if tf != "1D":
-        params["interval"] = TF_MAP[tf]
+    for attempt in range(retries):
+        try:
+            df = yf.download(
+                symbol,
+                interval=interval_map[tf],
+                period="30d",
+                progress=False,
+                threads=False
+            )
 
-    r = requests.get(ALPHA_BASE_URL, params=params, timeout=15)
-    data = r.json()
+            if df is None or df.empty or len(df) < 60:
+                raise ValueError("Empty data")
 
-    key = (
-        f"Time Series ({TF_MAP[tf]})"
-        if tf != "1D"
-        else "Time Series (Daily)"
-    )
+            df = df.rename(columns=str.lower)
+            return df
 
-    if key not in data:
-        print(f"⚠️ No data for {symbol} ({tf})")
-        return None
+        except Exception as e:
+            print(f"⚠️ Retry {attempt+1} for {symbol} ({tf}) → {e}")
+            time.sleep(3)
 
-    df = pd.DataFrame.from_dict(data[key], orient="index")
-    df = df.rename(columns={
-        "1. open": "open",
-        "2. high": "high",
-        "3. low": "low",
-        "4. close": "close",
-        "5. volume": "volume"
-    })
-
-    df = df.astype(float)
-    df.index = pd.to_datetime(df.index)
-    df = df.sort_index()
-
-    if len(df) < 60:
-        return None
-
-    return df
+    print(f"❌ Failed data for {symbol} ({tf})")
+    return None
 
 
 # =========================
@@ -84,13 +49,12 @@ def fetch_candles(symbol, tf):
 # =========================
 def scan_symbol(name, symbol):
     df_ltf = fetch_candles(symbol, LOWER_TF)
-    time.sleep(REQUEST_DELAY)
-
     df_htf = fetch_candles(symbol, HIGHER_TF)
-    time.sleep(REQUEST_DELAY)
 
     if df_ltf is None or df_htf is None:
         return
+
+    print(f"✅ Data OK for {name}")
 
     signal = generate_signal(df_ltf, df_htf)
     if not signal:
@@ -119,14 +83,14 @@ def scan_symbol(name, symbol):
 
 
 # =========================
-# MAIN SCANNER LOOP
+# MAIN LOOP
 # =========================
 def scanner_loop():
-    # 🔔 ONE-TIME TELEGRAM TEST
+    # 🔔 ONE-TIME TEST
     send_test_signal()
 
     while True:
-        print("📡 Alpha Vantage NSE Scanner running...")
+        print("📡 YFINANCE NSE Scanner running...")
         for name, symbol in STOCKS.items():
             print(f"🔍 Scanning {name}")
             scan_symbol(name, symbol)
