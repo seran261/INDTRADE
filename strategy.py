@@ -10,21 +10,21 @@ from indicators import (
 from config import *
 
 # =========================
-# TREND DETECTION (FIXED)
+# TREND DETECTION (SAFE)
 # =========================
 def detect_trend(df):
     if len(df) < MA_PERIOD:
         return None
 
-    close_price = float(df["close"].iloc[-1])
-
+    close_price = float(df["close"].iloc[-1].item())
     ma_series = moving_average(df["close"], MA_PERIOD)
-    ma_value = float(ma_series.iloc[-1])
 
-    if close_price > ma_value:
-        return "BUY"
-    else:
-        return "SELL"
+    if ma_series.isna().all():
+        return None
+
+    ma_value = float(ma_series.iloc[-1].item())
+
+    return "BUY" if close_price > ma_value else "SELL"
 
 
 # =========================
@@ -97,18 +97,18 @@ def generate_signal(df_ltf, df_htf):
     if trend_ltf is None or trend_htf is None:
         return None
 
-    # HTF must align with LTF
+    # Require alignment
     if trend_ltf != trend_htf:
         return None
 
-    # Volume confirmation
+    # Volume
     vol_ok = volume_spike(
         df_ltf["volume"],
         VOLUME_LOOKBACK,
         VOLUME_MULTIPLIER
     )
 
-    # Breakout confirmation
+    # Breakout
     breakout_ok = (
         breakout_high(df_ltf, BREAKOUT_LOOKBACK)
         if trend_ltf == "BUY"
@@ -122,8 +122,10 @@ def generate_signal(df_ltf, df_htf):
     if atr_series.isna().all():
         return None
 
-    atr_val = float(atr_series.iloc[-1])
-    atr_ok = atr_val > float(atr_series.mean())
+    atr_val = float(atr_series.iloc[-1].item())
+    atr_mean = float(atr_series.mean().item())
+
+    atr_ok = atr_val > atr_mean
 
     score = confidence_score(
         trend_ltf,
