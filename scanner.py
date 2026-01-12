@@ -123,6 +123,14 @@ def scan_symbol(name, symbol):
 # =========================
 # MAIN LOOP
 # =========================
+from telegram import send_test_signal
+
+def scanner_loop():
+    send_test_signal()  # 🔔 TEST ALERT (remove after confirmation)
+    while True:
+        print("📡 Alpha Vantage NSE Scanner running...")
+        ...
+
 def scanner_loop():
     while True:
         print("📡 Alpha Vantage NSE Scanner running...")
