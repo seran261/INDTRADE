@@ -1,8 +1,8 @@
 # =========================
-# MARKET MODE
+# MARKET / MODE
 # =========================
 MARKET = "INDIAN_EQUITY"
-DATA_PROVIDER = "ALPHA_VANTAGE"
+DATA_PROVIDER = "YFINANCE"
 
 # =========================
 # TIMEFRAMES
@@ -17,28 +17,22 @@ HIGHER_TF = "1H"
 # SCAN CONTROL
 # =========================
 # Seconds between full scan loops
-# (Keep >= 300 for Alpha Vantage free tier)
-SCAN_INTERVAL = 300
+SCAN_INTERVAL = 300   # 5 minutes (safe for yfinance)
 
 # =========================
 # TREND SETTINGS
 # =========================
-# Moving Average used for trend detection
-MA_PERIOD = 50
+MA_PERIOD = 50        # Moving average for trend
 
 # =========================
 # VOLUME FILTER
 # =========================
-# Lookback candles for avg volume
 VOLUME_LOOKBACK = 20
-
-# Current volume must be X times avg volume
-VOLUME_MULTIPLIER = 1.3
+VOLUME_MULTIPLIER = 1.3   # relaxed for Indian equities
 
 # =========================
 # BREAKOUT FILTER
 # =========================
-# Lookback candles for high/low breakout
 BREAKOUT_LOOKBACK = 20
 
 # =========================
@@ -46,10 +40,8 @@ BREAKOUT_LOOKBACK = 20
 # =========================
 ATR_PERIOD = 14
 
-# Stop loss = ATR * multiplier
-ATR_SL_MULTIPLIER = 1.0
+ATR_SL_MULTIPLIER = 1.0   # tighter SL for intraday
 
-# Take-profit ladder (ATR multiples)
 TP1_ATR = 0.8
 TP2_ATR = 1.6
 TP3_ATR = 2.5
@@ -63,20 +55,17 @@ WEIGHT_VOLUME    = 15
 WEIGHT_BREAKOUT  = 20
 WEIGHT_ATR       = 10
 
-# Minimum score required to send signal
-MIN_CONFIDENCE_SCORE = 40
+MIN_CONFIDENCE_SCORE = 40   # tuned to allow signals
 
 # =========================
 # SIGNAL CONTROL
 # =========================
-# Prevent duplicate signals per symbol per side
 SIGNAL_COOLDOWN_ENABLED = True
 
 # =========================
 # MARKET SESSION (OPTIONAL)
 # =========================
-# Indian market hours (IST)
 SESSION_START = "09:15"
 SESSION_END   = "15:30"
 
-USE_SESSION_FILTER = False  # turn ON later if needed
+USE_SESSION_FILTER = False  # enable later if needed
