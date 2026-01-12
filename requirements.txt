@@ -2,4 +2,4 @@ flask
 requests
 pandas
 gunicorn
-yfinance
+kiteconnect
