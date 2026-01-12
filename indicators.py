@@ -32,31 +32,35 @@ def atr(df, period):
 
 
 # =========================
-# VOLUME SPIKE
+# VOLUME SPIKE (FIXED)
 # =========================
 def volume_spike(volume, lookback, multiplier):
     avg_volume = volume.rolling(lookback).mean()
 
-    if avg_volume.iloc[-1] == 0:
+    if avg_volume.isna().all():
         return False
 
-    return volume.iloc[-1] > avg_volume.iloc[-1] * multiplier
+    latest_avg = avg_volume.iloc[-1]
+    latest_vol = volume.iloc[-1]
+
+    # 🔒 FORCE SCALARS
+    latest_avg = float(latest_avg.item())
+    latest_vol = float(latest_vol.item())
+
+    if latest_avg <= 0:
+        return False
+
+    return latest_vol > latest_avg * multiplier
 
 
 # =========================
 # BREAKOUT DETECTION
 # =========================
 def breakout_high(df, lookback):
-    """
-    Bullish breakout above recent high
-    """
     recent_high = df["high"].rolling(lookback).max().iloc[-2]
-    return df["close"].iloc[-1] > recent_high
+    return float(df["close"].iloc[-1].item()) > float(recent_high.item())
 
 
 def breakout_low(df, lookback):
-    """
-    Bearish breakdown below recent low
-    """
     recent_low = df["low"].rolling(lookback).min().iloc[-2]
-    return df["close"].iloc[-1] < recent_low
+    return float(df["close"].iloc[-1].item()) < float(recent_low.item())
