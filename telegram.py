@@ -61,3 +61,18 @@ def send_signal(symbol, tf, side, entry, sl, tp1, tp2, tp3, confidence):
     )
 
     send(msg)
+    # =========================
+# TEST SIGNAL (MANUAL)
+# =========================
+def send_test_signal():
+    send_signal(
+        symbol="TEST-STOCK",
+        tf="15m → 1H",
+        side="BUY",
+        entry=100.50,
+        sl=98.90,
+        tp1=102.00,
+        tp2=104.00,
+        tp3=107.00,
+        confidence=99
+    )
