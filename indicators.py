@@ -32,18 +32,21 @@ def atr(df, period):
 
 
 # =========================
-# VOLUME SPIKE (FIXED)
+# VOLUME SPIKE (100% SAFE)
 # =========================
 def volume_spike(volume, lookback, multiplier):
+    # Rolling average
     avg_volume = volume.rolling(lookback).mean()
 
-    if avg_volume.isna().all():
+    # 🔒 SAFE: no all(), no any(), no boolean Series
+    avg_volume_clean = avg_volume.dropna()
+    if avg_volume_clean.empty:
         return False
 
-    latest_avg = avg_volume.iloc[-1]
+    latest_avg = avg_volume_clean.iloc[-1]
     latest_vol = volume.iloc[-1]
 
-    # 🔒 FORCE SCALARS
+    # 🔒 FORCE PYTHON SCALARS
     latest_avg = float(latest_avg.item())
     latest_vol = float(latest_vol.item())
 
